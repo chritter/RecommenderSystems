@@ -41,6 +41,11 @@ class Corpus(object):
         self.dict.prep_dict()
 
 def data_generator(args):
+    '''
+
+    :param args:
+    :return:
+    '''
     path_to_data= data_path + args.data + '/'
     if not os.path.exists(path_to_data + args.data + '_train_tr.json'):
         tr_df = pd.read_csv(path_to_data + args.data + '_train_tr.txt', sep='\t')

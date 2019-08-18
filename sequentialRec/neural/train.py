@@ -16,7 +16,18 @@ from .model import *
 from .sampler import *
 
 parser = argparse.ArgumentParser(description='Sequential or session-based recommendation')
+
+# Setup parameters
+# options: rnn, tcn, transformer
 parser.add_argument('--model', type=str, default='tcn', help='sequential model: rnn/tcn/transformer. (default: tcn)')
+parser.add_argument('--data', type=str, default='gowalla', help='data set name (default: gowalla)')
+parser.add_argument('--log_interval', type=int, default=1e2, help='log interval (default: 1e2)')
+parser.add_argument('--eval_interval', type=int, default=1e3, help='eval/test interval (default: 1e3)')
+parser.add_argument('--worker', type=int, default=10, help='number of sampling workers (default: 10)')
+parser.add_argument('--levels', type=int, default=3, help='# of levels (default: 3)')
+parser.add_argument('--seed', type=int, default=1111, help='random seed (default: 1111)')
+
+# modeling parameters
 parser.add_argument('--batch_size', type=int, default=128, help='batch size (default: 128)')
 parser.add_argument('--seq_len', type=int, default=20, help='max sequence length (default: 20)')
 parser.add_argument('--dropout', type=float, default=0.2, help='dropout (default: 0.2)')
@@ -26,14 +37,9 @@ parser.add_argument('--epochs', type=int, default=20, help='upper epoch limit (d
 parser.add_argument('--lr', type=float, default=0.001, help='initial learning rate for Adam (default: 0.001)')
 parser.add_argument('--emsize', type=int, default=100, help='dimension of item embedding (default: 100)')
 parser.add_argument('--neg_size', type=int, default=1, help='size of negative samples (default: 10)')
-parser.add_argument('--worker', type=int, default=10, help='number of sampling workers (default: 10)')
 parser.add_argument('--nhid', type=int, default=100, help='number of hidden units (default: 100)')
-parser.add_argument('--levels', type=int, default=3, help='# of levels (default: 3)')
-parser.add_argument('--seed', type=int, default=1111, help='random seed (default: 1111)')
+
 parser.add_argument('--loss', type=str, default='ns', help='type of loss: ns/sampled_sm/full_sm (default: ns)')
-parser.add_argument('--data', type=str, default='gowalla', help='data set name (default: gowalla)')
-parser.add_argument('--log_interval', type=int, default=1e2, help='log interval (default: 1e2)')
-parser.add_argument('--eval_interval', type=int, default=1e3, help='eval/test interval (default: 1e3)')
 
 # ****************************** unique arguments for rnn model. *******************************************************
 # None
@@ -48,6 +54,7 @@ parser.add_argument('--pos_fixed', type=int, default=0, help='trainable position
 
 
 args = parser.parse_args()
+
 tf.set_random_seed(args.seed)
 
 train_data, val_data, test_data, n_items, n_users = data_generator(args)
