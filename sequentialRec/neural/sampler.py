@@ -28,11 +28,24 @@ def random_neg(pos, n, s):
 
 def sample_function(data, n_items, n_users, batch_size, max_len, neg_size, result_queue, SEED, neg_method='rand'):
     '''
-    data: list of train data, key: user, value: a set of all user's clicks.
-    tensors: list of train tensors, each element of list is also a list.
-    masks: list of train masks, each element of list is also a list.
-    batch_size: number of samples in a batch.
-    neg_size: number of negative samples.
+    Create batch of user samples.
+    #Below
+    #data:
+    #tensors: list of train tensors, each element of list is also a list.
+    #masks: list of train masks, each element of list is also a list.
+    #batch_size: number of samples in a batch.
+    #neg_size: number of negative samples.
+
+    :param data: list of train data, key: user, value: a set of all user's clicks.
+    :param n_items:
+    :param n_users:
+    :param batch_size:
+    :param max_len:
+    :param neg_size:
+    :param result_queue:
+    :param SEED:
+    :param neg_method:
+    :return:
     '''
     num_samples = np.array([len(data[str(u)]) for u in range(1, n_users+1)])
     prob_ = num_samples / (1.0 * np.sum(num_samples))

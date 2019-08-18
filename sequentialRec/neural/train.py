@@ -18,8 +18,12 @@ from .sampler import *
 parser = argparse.ArgumentParser(description='Sequential or session-based recommendation')
 
 # Setup parameters
+
 # options: rnn, tcn, transformer
 parser.add_argument('--model', type=str, default='tcn', help='sequential model: rnn/tcn/transformer. (default: tcn)')
+
+# uses subdirectory in data/, requires specific files *_train_tr.txt, etc.
+# with shape: UserId ItemId Time, no session id!
 parser.add_argument('--data', type=str, default='gowalla', help='data set name (default: gowalla)')
 parser.add_argument('--log_interval', type=int, default=1e2, help='log interval (default: 1e2)')
 parser.add_argument('--eval_interval', type=int, default=1e3, help='eval/test interval (default: 1e3)')
@@ -57,9 +61,10 @@ args = parser.parse_args()
 
 tf.set_random_seed(args.seed)
 
-#
+# pre-process data into dictionary files, get number of items, users
 train_data, val_data, test_data, n_items, n_users = data_generator(args)
 
+# creates batch iterator for training batches
 train_sampler = Sampler(
                     data=train_data, 
                     n_items=n_items, 
@@ -70,23 +75,33 @@ train_sampler = Sampler(
                     n_workers=args.worker,
                     neg_method='rand')
 
+# prepare batches for evaluation
 val_data = prepare_eval_test(val_data, batch_size=100, max_test_len= 20)
 
+# create checkpoint dir in data dir
 checkpoint_dir = '_'.join(['save', args.data, args.model, str(args.lr), str(args.l2_reg), str(args.emsize), str(args.dropout)])
 
 print(args)
 print ('#Item: ', n_items)
 print ('#User: ', n_users)
 
+# build the model
 model = NeuralSeqRecommender(args, n_items, n_users)
 
 lr = args.lr
 
 def evaluate(source, sess):
+    '''
+    Calculate evaluation scores NDCG@k and Hit@k
+    :param source: list of batches
+    :param sess:
+    :return:
+    '''
     total_hit_k = 0.0
     total_ndcg_k = 0.0
     count = 0.0
     for batch in source:
+        # prepare model input
         feed_dict = {model.inp: batch[1], model.dropout: 0.}
         feed_dict[model.pos] = batch[2]
         hit, ndcg, n_target = sess.run([model.hit_at_k, model.ndcg_at_k, model.num_target], feed_dict=feed_dict)
@@ -101,11 +116,14 @@ def evaluate(source, sess):
 
 def main():
     global lr
+
+    # graph and session setup
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     init = tf.global_variables_initializer()
     sess.run(init)
+
     all_val_hit = [-1]
     early_stop_cn = 0
     step_count = 0
@@ -114,14 +132,19 @@ def main():
     print('Start training...')
     try:
         while True:
+
+            # get new batch
             cur_batch = train_sampler.next_batch()
+
             inp = np.array(cur_batch[1])
             feed_dict = {model.inp: inp, model.lr: lr, model.dropout: args.dropout}
             feed_dict[model.pos] = np.array(cur_batch[2])
             feed_dict[model.neg] = np.array(cur_batch[3])
             _, train_loss = sess.run([model.train_op, model.loss], feed_dict=feed_dict)
+
             train_loss_l += train_loss
             step_count += 1
+
             if step_count % args.log_interval == 0:
                 cur_loss = train_loss_l / args.log_interval
                 elapsed = time.time() - start_time

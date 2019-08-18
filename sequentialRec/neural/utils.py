@@ -47,23 +47,33 @@ def data_generator(args):
     :return:
     '''
     path_to_data= data_path + args.data + '/'
+
+    # if data dictionaries have not been created yet...
     if not os.path.exists(path_to_data + args.data + '_train_tr.json'):
+
+        # read train, validation and test data
         tr_df = pd.read_csv(path_to_data + args.data + '_train_tr.txt', sep='\t')
         val_df = pd.read_csv(path_to_data + args.data + '_train_valid.txt', sep='\t')
         test_df = pd.read_csv(path_to_data + args.data + '_test.txt', sep='\t')
+
+
         corpus_item = Corpus(tr_df['ItemId'])
         corpus_user = Corpus(tr_df['UserId'])
+
+        # save item and user dicts
         np.save(path_to_data + args.data + '_item_dict', np.asarray(corpus_item.dict.idx2item))
         np.save(path_to_data + args.data + '_user_dict', np.asarray(corpus_user.dict.idx2item))
 
         tr = tr_df.sort_values(['UserId', 'Time']).groupby('UserId')['ItemId'].apply(list).to_dict()
         val = val_df.sort_values(['UserId', 'Time']).groupby('UserId')['ItemId'].apply(list).to_dict()
         test = test_df.sort_values(['UserId', 'Time']).groupby('UserId')['ItemId'].apply(list).to_dict()
-            
+
+        # for each data set convert items to index for each user, then write out json dictionary
         _ = prepare_data(corpus_item, corpus_user, tr, args.data + '_train_tr', path_to_data)
         _ = prepare_data(corpus_item, corpus_user, val, args.data + '_train_valid',path_to_data)
         _ = prepare_data(corpus_item, corpus_user, test, args.data + '_test', path_to_data)
 
+    # load data dictionaries
     with open(path_to_data + args.data + '_train_tr.json', 'r') as fp:
         train_data = json.load(fp)
     with open(path_to_data + args.data + '_train_valid.json', 'r') as fp:
@@ -71,6 +81,7 @@ def data_generator(args):
     with open(path_to_data + args.data + '_test.json', 'r') as fp:
         test_data = json.load(fp)
 
+    # load lookup tables
     item2idx = np.load(path_to_data + args.data + '_item_dict.npy')
     user2idx = np.load(path_to_data + args.data + '_user_dict.npy')
     n_items = item2idx.size
@@ -79,8 +90,18 @@ def data_generator(args):
     return [train_data, val_data, test_data, n_items, n_users]
 
 def prepare_data(corpus_item, corpus_user, data, dname, path_to_data):
+    '''
+    Convert items to index for all users and dump out as json dict.
+    :param corpus_item:
+    :param corpus_user:
+    :param data:
+    :param dname:
+    :param path_to_data:
+    :return:
+    '''
     ret = {}
     user_str_ids = data.keys()
+    # loop over users
     for u in user_str_ids:
         u_int_id = corpus_user.dict.item2idx[u]
         i_int_ids = []
@@ -94,6 +115,13 @@ def prepare_data(corpus_item, corpus_user, data, dname, path_to_data):
     return ret
 
 def prepare_eval_test(data, batch_size, max_test_len=100):
+    '''
+    
+    :param data:
+    :param batch_size:
+    :param max_test_len:
+    :return:
+    '''
     if batch_size < 2:
         batch_size = 2
     uids = data.keys()
